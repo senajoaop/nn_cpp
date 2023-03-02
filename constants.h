@@ -3,6 +3,9 @@
 #include <iostream>
 #include <vector>
 #include <cmath>
+#include <fstream>
+#include <string>
+#include <complex>
 
 
 std::vector<double> calculate_lambda() {
