@@ -10,9 +10,9 @@ typedef std::complex<double> dcomplex;
 // #define MESHx 100
 
 struct Beam {
-  const int n = 6;
-  const int MESHx = 200;
-  const int MESHw = 300;
+  const int n = 10;
+  const int MESHx = 1000;
+  const int MESHw = 5000;
   const int size = n * MESHx;
   const dcomplex _1j = {0.0, 1.0};
   const std::string config = "series";
@@ -31,6 +31,8 @@ struct Beam {
   double f_i;
   double f_f;
   double R;
+  double zeta1;
+  double zeta2;
 
   double m;
   double YI;
@@ -47,13 +49,15 @@ struct Beam {
   std::vector<double> sigma_mass;
   std::vector<double> theta_r;
   std::vector<double> Cp;
-  
+  std::vector<double> damp;
+  std::vector<double> f;
+
   std::vector<double> zeta = {1.1, 1.2, 1.3, 1.4, 1.5, 1.6};
 
   std::vector<dcomplex> w;
   std::vector<dcomplex> FRFwrel;
 
-  Beam() : x(MESHx), lamb_r(n), sigma_r(n), omega_r(n), phi_r(size), dphi_r(size), sigma_mass(n), theta_r(n), Cp(n), w(MESHw), FRFwrel(MESHw) {
+  Beam() : x(MESHx), lamb_r(n), sigma_r(n), omega_r(n), phi_r(size), dphi_r(size), sigma_mass(n), theta_r(n), Cp(n), damp(n), f(MESHw), w(MESHw), FRFwrel(MESHw) {
 
     properties();
 
@@ -66,7 +70,8 @@ struct Beam {
     double stepw = (f_f - f_i) / (MESHw-1);
 
     for (int i = 0; i<MESHw; i++) {
-      w[i] = f_i + i * stepw;
+      f[i] = f_i + i * stepw;
+      w[i] = f[i] * 2 * M_PI;
       FRFwrel[i] = 0.0;
     }
 
@@ -84,7 +89,7 @@ struct Beam {
 
   void properties() {
     std::fstream newfile;
-    double data[13];
+    double data[15];
     newfile.open("input_data.txt",std::ios::in);
 
     if (newfile.is_open()){
@@ -110,6 +115,8 @@ struct Beam {
     f_i = data[10];
     f_f = data[11];
     R = data[12];
+    zeta1 = data[13];
+    zeta2 = data[14];
 
     YI = ((2 * b) / 3) * ((Ys * (pow(hs, 3) / 8)) + c11 * (pow(hp + (hs / 2), 3) - (pow(hs, 3) / 8)));
     m = b * (ps * hs + 2 * pp * hp);
@@ -153,6 +160,41 @@ struct Beam {
     }
   }
 
+  void calculate_damping() {
+    damp[0] = zeta1;
+    damp[1] = zeta2;
+
+    double T1 = (2*omega_r[0]*omega_r[1])/(pow(omega_r[0], 2) - pow(omega_r[1], 2));
+    std::vector<double> matProp = { YI/omega_r[1], -YI/omega_r[0], -m*omega_r[1], m*omega_r[0] };
+    std::vector<double> zeta = { damp[0], damp[1] };
+    std::vector<double> csIca(2);
+
+    for (int i=0; i<4; i++) {
+      matProp[i] *= T1;
+    }
+
+    // std::vector<double> res(2);
+    // std::vector<double> A = { 1, 2, 3, 4 };
+    // std::vector<double> B = { 5, 6 };
+
+    csIca = matrix_multiplication_linsys(matProp, zeta);
+
+    for (int i=2; i<n; i+=2) {
+      T1 = (2*omega_r[i]*omega_r[i+1])/(pow(omega_r[i], 2) - pow(omega_r[i+1], 2));
+      matProp[0] = T1*(YI/omega_r[i+1]);
+      matProp[1] = T1*(-YI/omega_r[i]);
+      matProp[2] = T1*(-m*omega_r[i+1]);
+      matProp[3] = T1*(m*omega_r[i]);
+      zeta = solve_linear_system(matProp, csIca);
+      damp[i] = zeta[0];
+      damp[i+1] = zeta[1];
+    }
+
+    // for (int i=0; i<n; i++) {
+    //   std::cout << damp[i] << ", ";
+    // }
+  }
+
   void calculate_FRF() {
     dcomplex T1;
     dcomplex T2;
@@ -165,15 +207,17 @@ struct Beam {
       FRFwrel[i] = 0.0;
       for (int j=0; j<n; j++) {
         idx = MESHx*(j + 1) - 1;
+        if (i==0) std::cout << "idx: " << idx << std::endl;
+        if (i==0) std::cout << "phiL: " << phi_r[idx] << std::endl;
         T1 = 0.0;
         T3 = 0.0;
         for (int k=0; k<n; k++) {
-          T1 += (_1j*w[i]*theta_r[k]*sigma_mass[k])/(pow(omega_r[k], 2) - pow(w[i], 2) + _1j*2.0*zeta[k]*omega_r[k]*w[i]);
-          T3 += (_1j*w[i]*pow(theta_r[k], 2))/(pow(omega_r[k], 2) - pow(w[i], 2) + _1j*2.0*zeta[k]*omega_r[k]*w[i]);
+          T1 += (_1j*w[i]*theta_r[k]*sigma_mass[k])/(pow(omega_r[k], 2) - pow(w[i], 2) + _1j*2.0*damp[k]*omega_r[k]*w[i]);
+          T3 += (_1j*w[i]*pow(theta_r[k], 2))/(pow(omega_r[k], 2) - pow(w[i], 2) + _1j*2.0*damp[k]*omega_r[k]*w[i]);
         }
-      
+
         T2 = 1/R + _1j*w[i]*Cp[j];
-        T4 = sigma_r[idx]/(pow(omega_r[j], 2) - pow(w[i], 2) + _1j*2.0*zeta[j]*omega_r[j]*w[i]);
+        T4 = phi_r[idx]/(pow(omega_r[j], 2) - pow(w[i], 2) + _1j*2.0*damp[j]*omega_r[j]*w[i]);
 
         FRFwrel[i] += (sigma_mass[j] - theta_r[j]*T1/(T2 + T3))*(T4);
       }
@@ -202,6 +246,7 @@ int main() {
   Beam bb = Beam();
   bb.lamb_r = calculate_lambda();
   bb.calculate_phi();
+  bb.calculate_damping();
 
   bb.calculate_FRF();
 
@@ -210,9 +255,18 @@ int main() {
 
   for (int i=0; i<bb.MESHw; i++) {
     X[i] = sqrt(pow(real(bb.w[i]), 2) + pow(imag(bb.w[i]), 2));
-    Y[i] = sqrt(pow(real(bb.FRFwrel[i]), 2) + pow(imag(bb.FRFwrel[i]), 2));
+    Y[i] = log10(sqrt(pow(real(bb.FRFwrel[i]), 2) + pow(imag(bb.FRFwrel[i]), 2)));
   }
-  plot_vector(X, Y);
+  int idx = get_idx_peak(Y);
+  std::cout << idx << ", " << bb.f[idx] << std::endl;
+  plot_vector(bb.f, Y);
+
+  // std::cout << std::endl; 
+  // for (int i=0; i<bb.n; i++) {
+  //   std::cout << bb.omega_r[i] / 2 / M_PI << std::endl;
+  // }
+
+  // solve_linear_system();
 
 
   // for (int i = 0; i<bb.n; i++) {

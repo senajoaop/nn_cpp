@@ -1,9 +1,89 @@
+import sys
 import sympy
 import numpy as np 
 from sympy import Pow, Rational, Mul, Add, Integer
+import matplotlib.pyplot as plt
+
+plt.style.use('seaborn')
+
+a = 3
+b = 7
+
+X = np.linspace(-100, 100, 1000)
+X2 = X - a
+Y = (X2)**2+a
+
+a = np.linspace(-4, 4, 10)
+for item in a:
+    # X2 = X - item
+    # Y = (X2)**2+item
+    X2 = X-item
+    Y = (X2-b)**2 + (Xb)*item +b
+    plt.plot(X, Y)
+
+plt.xlim(-100, 100)
+plt.ylim(-100, 100)
+
+plt.show()
+
+
+sys.exit()
+
+
+X = np.linspace(-10, 10, 1000)
+Y = np.linspace(-10, 10, 1000)
+Y2 = (Y**2)
+X2 = X - Y
+
+X2, Y2 = np.meshgrid(X2, Y2)
+
+Z = (X2)**2+(Y2**2)
+
+fig, ax = plt.subplots(subplot_kw={"projection": "3d"})
+
+# Plot the surface.
+surf = ax.plot_surface(X, Y, Z, linewidth=0, antialiased=False)
+
+# Customize the z axis.
+# ax.set_zlim(-1.01, 1.01)
+# ax.zaxis.set_major_locator(LinearLocator(10))
+# A StrMethodFormatter is used automatically
+# ax.zaxis.set_major_formatter('{x:.02f}')
+
+# Add a color bar which maps values to colors.
+fig.colorbar(surf, shrink=0.5, aspect=5)
+
+plt.show()
 
 
 
+# plt.plot(X, Y)
+#
+#
+# plt.xlim(0, 10)
+# plt.ylim(0, 10)
+# # plt.grid()
+#
+#
+# plt.show()
+
+
+
+
+
+sys.exit()
+
+x, c1, c2, c3, c4, c5, c6 = sympy.symbols("x c1 c2 c3 c4 c5 c6")
+
+eq = (c1 - c2*(c3/(1/x + c4 + c5)))*c6
+
+deq = sympy.diff(eq, x)
+
+print(eq)
+sympy.pprint(deq)
+
+
+sys.exit()
 
 m, L, hr, x = sympy.symbols("m L hr x")
 

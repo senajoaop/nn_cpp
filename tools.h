@@ -2,80 +2,169 @@
 #include <string.h>
 
 void plot_vector(std::vector<double> X, std::vector<double> Y) {
-    Py_Initialize();
+  Py_Initialize();
 
+  std::string x = "";
+  std::string y = "";
+
+  x += "[";
+  y += "[";
+  for (int i = 0; i<X.size(); i++) {
+    x += std::to_string(X[i]);
+    y += std::to_string(Y[i]);
+    if (i!=X.size()-1) {
+      x += ",";
+      y += ",";
+    }
+  }
+  x += "]";
+  y += "]";
+
+  // std::cout << x << std::endl;
+
+  std::string script = "import matplotlib.pyplot as plt\n"
+    "plt.plot("+x+","+y+")\n"
+    "plt.show()\n";
+
+  // std::cout << script << std::endl;
+  PyRun_SimpleString((script).c_str());
+  Py_Finalize();
+}
+
+
+void multiplot_vector(std::vector<double> X, std::vector<double> Y, int nv, int nplt) {
+  Py_Initialize();
+
+  std::string script2 = "";
+  int idx;
+
+  for (int j=0; j<nplt; j++) {
     std::string x = "";
     std::string y = "";
 
     x += "[";
     y += "[";
     for (int i = 0; i<X.size(); i++) {
-        x += std::to_string(X[i]);
-        y += std::to_string(Y[i]);
-        if (i!=X.size()-1) {
-            x += ",";
-            y += ",";
-        }
+      idx = j * X.size() + i;
+
+      x += std::to_string(X[i]);
+      y += std::to_string(Y[idx]);
+      if (i!=X.size()-1) {
+        x += ",";
+        y += ",";
+      }
     }
     x += "]";
     y += "]";
 
-    std::cout << x << std::endl;
+    script2 += "plt.plot("+x+","+y+",label=\"Modo "+std::to_string(j)+"\")\n";
+  }
 
-    std::string script = "import matplotlib.pyplot as plt\n"
-                 "plt.plot("+x+","+y+")\n"
-                 "plt.show()\n";
+  std::string script1 = "import matplotlib.pyplot as plt\n";
+  std::string script3 = "plt.legend()\nplt.show()\n";
 
-    std::cout << script << std::endl;
-    PyRun_SimpleString((script).c_str());
-    Py_Finalize();
+  std::string script = script1 + script2 + script3;
+
+  // std::cout << script << std::endl;
+  PyRun_SimpleString((script).c_str());
+  Py_Finalize();
 }
 
 
-void multiplot_vector(std::vector<double> X, std::vector<double> Y, int nv, int nplt) {
-    Py_Initialize();
+std::vector<double> matrix_multiplication_linsys(std::vector<double> A, std::vector<double> B) {
 
-    std::string script2 = "";
-    int idx;
+  int idx1, idx2, idx3;
+  std::vector<double> res(2);
 
-    for (int j=0; j<nplt; j++) {
-      std::string x = "";
-      std::string y = "";
+  for(int i=0; i<2; ++i) {
+    for(int j=0; j<1; ++j) {
+      for(int k=0; k<2; ++k) {
+        idx1 = i*1 + j;
+        idx2 = i*2 + k;
+        idx3 = k*1 + j;
+        res[idx1] += A[idx2] * B[idx3];
+      }
+    }
+  }
+  
+  return res;
+}
 
-      x += "[";
-      y += "[";
-      for (int i = 0; i<X.size(); i++) {
-          idx = j * X.size() + i;
+std::vector<double> solve_linear_system(std::vector<double> A, std::vector<double> B) {
+  int i,j,k,n;
 
-          x += std::to_string(X[i]);
-          y += std::to_string(Y[idx]);
-          if (i!=X.size()-1) {
-              x += ",";
-              y += ",";
+  std::vector<double> resvec(2);
+
+  double mat[2][3] = { { A[0], A[1], B[0] }, { A[2], A[3], B[1] } };
+
+  double res[2];
+
+  n = 2;
+
+  // cout<<"\nEnter the elements of the augmented matrix: ";
+  // for(i=0;i<n;i++)
+  // {
+  //   for(j=0;j<n+1;j++)
+  // {
+  //   cin>>mat[i][j]; 
+  // }    
+  // }
+
+  for(i=0; i<n; i++) {                   
+      for(j=i+1; j<n; j++) {
+          if(abs(mat[i][i]) < abs(mat[j][i])) {
+            for(k=0; k<n+1; k++) {
+                mat[i][k] = mat[i][k] + mat[j][k];
+                mat[j][k] = mat[i][k] - mat[j][k];
+                mat[i][k] = mat[i][k] - mat[j][k];
+            }
           }
       }
-      x += "]";
-      y += "]";
+  }
 
-      script2 += "plt.plot("+x+","+y+",label=\"Modo "+std::to_string(j)+"\")\n";
-    }
+  for(i=0; i<n-1; i++) {
+      for(j=i+1; j<n; j++) {
+          float f=mat[j][i]/mat[i][i];
+          for(k=0;k<n+1;k++) {
+              mat[j][k]=mat[j][k]-f*mat[i][k];
+          }
+      }
+  }
 
-    std::string script1 = "import matplotlib.pyplot as plt\n";
-    std::string script3 = "plt.legend()\nplt.show()\n";
+  for(i=n-1; i>=0; i--) {                     
+      res[i]=mat[i][n];
 
-    std::string script = script1 + script2 + script3;
+      for(j=i+1; j<n; j++) {
+          if(i!=j) {
+            res[i]=res[i]-mat[i][j]*res[j];
+          }          
+        }
+      res[i]=res[i]/mat[i][i];  
+  }
 
-    std::cout << script << std::endl;
-    PyRun_SimpleString((script).c_str());
-    Py_Finalize();
+  // std::cout<<"\nThe values of unknowns for the above equations=>\n";
+  // for(i=0; i<n; i++) {
+  //   std::cout<<res[i]<<"\n";
+  // }
+
+  resvec[0] = res[0];
+  resvec[1] = res[1];
+
+  return resvec;
 }
 
+int get_idx_peak(std::vector<double> vec) {
+  if (vec.size() == 1)
+    return 0;
+  if (vec[0] >= vec[1])
+    return 0;
+  if (vec[vec.size() - 1] >= vec[vec.size() - 2])
+    return vec.size() - 1;
 
+  for (int i=1; i<vec.size()-1; i++) {
+    if (vec[i] >= vec[i-1] && vec[i] >= vec[i+1])
+      return i;
+  }
 
-void teste() {
-    // Py_SetProgramName(argv[0]);  /* optional but recommended */
-    Py_Initialize();
-    PyRun_SimpleString("from time import time,ctime\n"
-                 "print('Today is',ctime(time()))\n");
-    Py_Finalize();
+  return 0;
 }

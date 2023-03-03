@@ -6,6 +6,7 @@
 #include <fstream>
 #include <string>
 #include <complex>
+#include <math.h>
 
 
 std::vector<double> calculate_lambda() {
