@@ -1,4 +1,5 @@
-#include <python3.10/Python.h>
+// #include <python3.8/Python.h>
+#include <Python.h>
 #include <string.h>
 
 void plot_vector(std::vector<double> X, std::vector<double> Y) {
@@ -29,6 +30,10 @@ void plot_vector(std::vector<double> X, std::vector<double> Y) {
   // std::cout << script << std::endl;
   PyRun_SimpleString((script).c_str());
   Py_Finalize();
+
+  std::ofstream out("script_plot.py");
+  out << script;
+  out.close();
 }
 
 

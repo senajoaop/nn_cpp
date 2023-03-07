@@ -3,16 +3,19 @@
 #include "constants.h"
 #include "tools.h"
 
-#include <python3.10/Python.h>
+// #include <python3.10/Python.h>
+// #include <Python.h>
 
 typedef std::complex<double> dcomplex;
+
+// extern Beam bstruc;
 
 // #define MESHx 100
 
 struct Beam {
-  const int n = 10;
-  const int MESHx = 1000;
-  const int MESHw = 5000;
+  const int n = 8;
+  const int MESHx = 100;
+  const int MESHw = 2000;
   const int size = n * MESHx;
   const dcomplex _1j = {0.0, 1.0};
   const std::string config = "series";
@@ -51,6 +54,8 @@ struct Beam {
   std::vector<double> Cp;
   std::vector<double> damp;
   std::vector<double> f;
+  std::vector<double> FRFwrelABS;
+  std::vector<double> dFRFwrelABS;
 
   std::vector<double> zeta = {1.1, 1.2, 1.3, 1.4, 1.5, 1.6};
 
@@ -58,7 +63,7 @@ struct Beam {
   std::vector<dcomplex> FRFwrel;
   std::vector<dcomplex> dFRFwrel;
 
-  Beam() : x(MESHx), lamb_r(n), sigma_r(n), omega_r(n), phi_r(size), dphi_r(size), sigma_mass(n), theta_r(n), Cp(n), damp(n), f(MESHw), w(MESHw), FRFwrel(MESHw), dFRFwrel(MESHw) {
+  Beam() : x(MESHx), lamb_r(n), sigma_r(n), omega_r(n), phi_r(size), dphi_r(size), sigma_mass(n), theta_r(n), Cp(n), damp(n), f(MESHw), w(MESHw), FRFwrel(MESHw), dFRFwrel(MESHw), FRFwrelABS(MESHw), dFRFwrelABS(MESHw) {
 
     properties();
 
@@ -226,8 +231,31 @@ struct Beam {
 
         FRFwrel[i] += (sigma_mass[j] - theta_r[j]*T1/(T2 + T3 + T4))*(T5);
         dFRFwrel[i] += - (theta_r[j]*T1*T5)/(pow(R, 2)*pow(T2 + T3 + T4, 2));
+
+        FRFwrelABS[i] = log10(sqrt(pow(real(FRFwrel[i]), 2) + pow(imag(FRFwrel[i]), 2)));
+        dFRFwrelABS[i] = log10(sqrt(pow(real(dFRFwrel[i]), 2) + pow(imag(dFRFwrel[i]), 2)));
       }
     }
+  }
+
+  double peak_first_mode() {
+    int idx;
+
+    idx = get_idx_peak(FRFwrelABS);
+
+    return FRFwrelABS[idx];
+  }
+
+  double peak_first_mode_derivative() {
+    int idx;
+
+    idx = get_idx_peak(FRFwrelABS);
+
+    return dFRFwrelABS[idx];
+  }
+
+  void update_resistante(double resistance) {
+    R = resistance;
   }
 
   void printv(std::vector<double> vec) {
@@ -247,59 +275,81 @@ struct Beam {
   }
 };
 
-int main() {
+// int main() {
+//
+//   Beam bb = Beam();
+//   bb.lamb_r = calculate_lambda();
+//   bb.calculate_phi();
+//   bb.calculate_damping();
+//
+//   std::cout << bb.R << std::endl;
+//
+//   bb.calculate_FRF();
+//
+//   std::vector<double> X(bb.MESHw);
+//   std::vector<double> Y(bb.MESHw);
+//
+//   for (int i=0; i<bb.MESHw; i++) {
+//     X[i] = sqrt(pow(real(bb.w[i]), 2) + pow(imag(bb.w[i]), 2));
+//     Y[i] = log10(sqrt(pow(real(bb.FRFwrel[i]), 2) + pow(imag(bb.FRFwrel[i]), 2)));
+//     // Y[i] = log10(sqrt(pow(real(bb.dFRFwrel[i]), 2) + pow(imag(bb.dFRFwrel[i]), 2)));
+//   }
+//   int idx = get_idx_peak(Y);
+//   std::cout << idx << ", " << bb.f[idx] << std::endl;
+//   // plot_vector(bb.f, Y);
+//
+//
+//   bb.update_resistante(0.0000001);
+//   std::cout << bb.R << std::endl;
+//   bb.calculate_FRF();
+//
+//   // std::vector<double> X(bb.MESHw);
+//   // std::vector<double> Y(bb.MESHw);
+//
+//   for (int i=0; i<bb.MESHw; i++) {
+//     X[i] = sqrt(pow(real(bb.w[i]), 2) + pow(imag(bb.w[i]), 2));
+//     Y[i] = log10(sqrt(pow(real(bb.FRFwrel[i]), 2) + pow(imag(bb.FRFwrel[i]), 2)));
+//     // Y[i] = log10(sqrt(pow(real(bb.dFRFwrel[i]), 2) + pow(imag(bb.dFRFwrel[i]), 2)));
+//   }
+//   idx = get_idx_peak(Y);
+//   std::cout << idx << ", " << bb.f[idx] << std::endl;
+//   // plot_vector(bb.f, Y);
+//
+//   // std::cout << std::endl; 
+//   // for (int i=0; i<bb.n; i++) {
+//   //   std::cout << bb.omega_r[i] / 2 / M_PI << std::endl;
+//   // }
+//
+//   // solve_linear_system(;
+//
+//
+//   // for (int i = 0; i<bb.n; i++) {
+//   //   std::cout << bb.sigma_mass[i] << std::endl;
+//   // }
+//
+//
+//   // bb.properties();
+//
+//   // bb.printv(bb.dphi_r);
+//
+//   // for (int i = 0; i<bb.n; i++) {
+//   //     for (int j = 0; j<bb.MESHx; j++) {
+//   //         std::cout << bb.phi_r[i][j]; 
+//   //     }
+//   //     std::endl;
+//   // }
+//
+//   // std::cout << "olá " << bb.L << std::endl;
+//   //
+//   // multiplot_vector(bb.x, bb.phi_r, bb.MESHx, bb.n);
+//   // plot_vector(bb.x, std::vector<double>(&bb.phi_r[0], &bb.phi_r[bb.MESHx]));
+//   // plot_vector(bb.x, std::vector<double>(&bb.phi_r[bb.MESHx], &bb.phi_r[bb.MESHx*2]));
+//   // plot_vector(bb.x, std::vector<double>(&bb.phi_r[bb.MESHx*2], &bb.phi_r[bb.MESHx*3]));
+//   // Py_Initialize();
+//   // PyRun_SimpleString("from time import time,ctime\n"
+//   //              "print('Today is',ctime(time()))\n");
+//   // Py_Finalize();
+// }
 
-  Beam bb = Beam();
-  bb.lamb_r = calculate_lambda();
-  bb.calculate_phi();
-  bb.calculate_damping();
-
-  bb.calculate_FRF();
-
-  std::vector<double> X(bb.MESHw);
-  std::vector<double> Y(bb.MESHw);
-
-  for (int i=0; i<bb.MESHw; i++) {
-    X[i] = sqrt(pow(real(bb.w[i]), 2) + pow(imag(bb.w[i]), 2));
-    Y[i] = log10(sqrt(pow(real(bb.FRFwrel[i]), 2) + pow(imag(bb.FRFwrel[i]), 2)));
-    // Y[i] = log10(sqrt(pow(real(bb.dFRFwrel[i]), 2) + pow(imag(bb.dFRFwrel[i]), 2)));
-  }
-  int idx = get_idx_peak(Y);
-  std::cout << idx << ", " << bb.f[idx] << std::endl;
-  plot_vector(bb.f, Y);
-
-  // std::cout << std::endl; 
-  // for (int i=0; i<bb.n; i++) {
-  //   std::cout << bb.omega_r[i] / 2 / M_PI << std::endl;
-  // }
-
-  // solve_linear_system(;
 
 
-  // for (int i = 0; i<bb.n; i++) {
-  //   std::cout << bb.sigma_mass[i] << std::endl;
-  // }
-
-
-  // bb.properties();
-
-  // bb.printv(bb.dphi_r);
-
-  // for (int i = 0; i<bb.n; i++) {
-  //     for (int j = 0; j<bb.MESHx; j++) {
-  //         std::cout << bb.phi_r[i][j]; 
-  //     }
-  //     std::endl;
-  // }
-
-  // std::cout << "olá " << bb.L << std::endl;
-  //
-  // multiplot_vector(bb.x, bb.phi_r, bb.MESHx, bb.n);
-  // plot_vector(bb.x, std::vector<double>(&bb.phi_r[0], &bb.phi_r[bb.MESHx]));
-  // plot_vector(bb.x, std::vector<double>(&bb.phi_r[bb.MESHx], &bb.phi_r[bb.MESHx*2]));
-  // plot_vector(bb.x, std::vector<double>(&bb.phi_r[bb.MESHx*2], &bb.phi_r[bb.MESHx*3]));
-  // Py_Initialize();
-  // PyRun_SimpleString("from time import time,ctime\n"
-  //              "print('Today is',ctime(time()))\n");
-  // Py_Finalize();
-}
