@@ -56,8 +56,9 @@ struct Beam {
 
   std::vector<dcomplex> w;
   std::vector<dcomplex> FRFwrel;
+  std::vector<dcomplex> dFRFwrel;
 
-  Beam() : x(MESHx), lamb_r(n), sigma_r(n), omega_r(n), phi_r(size), dphi_r(size), sigma_mass(n), theta_r(n), Cp(n), damp(n), f(MESHw), w(MESHw), FRFwrel(MESHw) {
+  Beam() : x(MESHx), lamb_r(n), sigma_r(n), omega_r(n), phi_r(size), dphi_r(size), sigma_mass(n), theta_r(n), Cp(n), damp(n), f(MESHw), w(MESHw), FRFwrel(MESHw), dFRFwrel(MESHw) {
 
     properties();
 
@@ -72,7 +73,8 @@ struct Beam {
     for (int i = 0; i<MESHw; i++) {
       f[i] = f_i + i * stepw;
       w[i] = f[i] * 2 * M_PI;
-      FRFwrel[i] = 0.0;
+      // FRFwrel[i] = 0.0;
+      // dFRFwrel[i] = 0.0;
     }
 
     lamb_r = calculate_lambda();
@@ -200,26 +202,30 @@ struct Beam {
     dcomplex T2;
     dcomplex T3;
     dcomplex T4;
+    dcomplex T5;
 
     int idx;
 
     for (int i=0; i<MESHw; i++) {
       FRFwrel[i] = 0.0;
+      dFRFwrel[i] = 0.0;
       for (int j=0; j<n; j++) {
         idx = MESHx*(j + 1) - 1;
-        if (i==0) std::cout << "idx: " << idx << std::endl;
-        if (i==0) std::cout << "phiL: " << phi_r[idx] << std::endl;
+        // if (i==0) std::cout << "idx: " << idx << std::endl;
+        // if (i==0) std::cout << "phiL: " << phi_r[idx] << std::endl;
         T1 = 0.0;
-        T3 = 0.0;
+        T4 = 0.0;
         for (int k=0; k<n; k++) {
           T1 += (_1j*w[i]*theta_r[k]*sigma_mass[k])/(pow(omega_r[k], 2) - pow(w[i], 2) + _1j*2.0*damp[k]*omega_r[k]*w[i]);
-          T3 += (_1j*w[i]*pow(theta_r[k], 2))/(pow(omega_r[k], 2) - pow(w[i], 2) + _1j*2.0*damp[k]*omega_r[k]*w[i]);
+          T4 += (_1j*w[i]*pow(theta_r[k], 2))/(pow(omega_r[k], 2) - pow(w[i], 2) + _1j*2.0*damp[k]*omega_r[k]*w[i]);
         }
 
-        T2 = 1/R + _1j*w[i]*Cp[j];
-        T4 = phi_r[idx]/(pow(omega_r[j], 2) - pow(w[i], 2) + _1j*2.0*damp[j]*omega_r[j]*w[i]);
+        T2 = 1/R;
+        T3 = _1j*w[i]*Cp[j];
+        T5 = phi_r[idx]/(pow(omega_r[j], 2) - pow(w[i], 2) + _1j*2.0*damp[j]*omega_r[j]*w[i]);
 
-        FRFwrel[i] += (sigma_mass[j] - theta_r[j]*T1/(T2 + T3))*(T4);
+        FRFwrel[i] += (sigma_mass[j] - theta_r[j]*T1/(T2 + T3 + T4))*(T5);
+        dFRFwrel[i] += - (theta_r[j]*T1*T5)/(pow(R, 2)*pow(T2 + T3 + T4, 2));
       }
     }
   }
@@ -256,6 +262,7 @@ int main() {
   for (int i=0; i<bb.MESHw; i++) {
     X[i] = sqrt(pow(real(bb.w[i]), 2) + pow(imag(bb.w[i]), 2));
     Y[i] = log10(sqrt(pow(real(bb.FRFwrel[i]), 2) + pow(imag(bb.FRFwrel[i]), 2)));
+    // Y[i] = log10(sqrt(pow(real(bb.dFRFwrel[i]), 2) + pow(imag(bb.dFRFwrel[i]), 2)));
   }
   int idx = get_idx_peak(Y);
   std::cout << idx << ", " << bb.f[idx] << std::endl;
@@ -266,7 +273,7 @@ int main() {
   //   std::cout << bb.omega_r[i] / 2 / M_PI << std::endl;
   // }
 
-  // solve_linear_system();
+  // solve_linear_system(;
 
 
   // for (int i = 0; i<bb.n; i++) {

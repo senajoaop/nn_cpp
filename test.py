@@ -18,16 +18,16 @@ for item in a:
     # X2 = X - item
     # Y = (X2)**2+item
     X2 = X-item
-    Y = (X2-b)**2 + (Xb)*item +b
+    Y = (X2-b)**2 + (X-b)*item +b
     plt.plot(X, Y)
 
 plt.xlim(-100, 100)
 plt.ylim(-100, 100)
 
-plt.show()
+# plt.show()
 
 
-sys.exit()
+# sys.exit()
 
 
 X = np.linspace(-10, 10, 1000)
@@ -53,7 +53,7 @@ surf = ax.plot_surface(X, Y, Z, linewidth=0, antialiased=False)
 # Add a color bar which maps values to colors.
 fig.colorbar(surf, shrink=0.5, aspect=5)
 
-plt.show()
+# plt.show()
 
 
 
@@ -71,7 +71,7 @@ plt.show()
 
 
 
-sys.exit()
+# sys.exit()
 
 x, c1, c2, c3, c4, c5, c6 = sympy.symbols("x c1 c2 c3 c4 c5 c6")
 
@@ -79,7 +79,7 @@ eq = (c1 - c2*(c3/(1/x + c4 + c5)))*c6
 
 deq = sympy.diff(eq, x)
 
-print(eq)
+sympy.pprint(eq)
 sympy.pprint(deq)
 
 
