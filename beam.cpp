@@ -15,7 +15,9 @@ typedef std::complex<double> dcomplex;
 struct Beam {
   const int n = 8;
   const int MESHx = 100;
-  const int MESHw = 2000;
+  const int MESHw = 50000;
+  const int MESHw_alt = 800;
+  const double nf_alt = 80.0;
   const int size = n * MESHx;
   const dcomplex _1j = {0.0, 1.0};
   const std::string config = "series";
@@ -41,7 +43,6 @@ struct Beam {
   double YI;
   double hpc;
 
-  // decidir um novo construtor
 
   std::vector<double> x;
   std::vector<double> lamb_r;
@@ -56,16 +57,20 @@ struct Beam {
   std::vector<double> f;
   std::vector<double> FRFwrelABS;
   std::vector<double> dFRFwrelABS;
+  std::vector<double> f_alt;
+  std::vector<double> FRFwrelABS_alt;
 
   std::vector<double> zeta = {1.1, 1.2, 1.3, 1.4, 1.5, 1.6};
 
   std::vector<dcomplex> w;
   std::vector<dcomplex> FRFwrel;
   std::vector<dcomplex> dFRFwrel;
+  std::vector<dcomplex> w_alt;
+  std::vector<dcomplex> FRFwrel_alt;
 
-  Beam() : x(MESHx), lamb_r(n), sigma_r(n), omega_r(n), phi_r(size), dphi_r(size), sigma_mass(n), theta_r(n), Cp(n), damp(n), f(MESHw), w(MESHw), FRFwrel(MESHw), dFRFwrel(MESHw), FRFwrelABS(MESHw), dFRFwrelABS(MESHw) {
+  Beam(std::string fileName) : x(MESHx), lamb_r(n), sigma_r(n), omega_r(n), phi_r(size), dphi_r(size), sigma_mass(n), theta_r(n), Cp(n), damp(n), f(MESHw), f_alt(MESHw_alt), w(MESHw), FRFwrel(MESHw), dFRFwrel(MESHw), FRFwrelABS(MESHw), dFRFwrelABS(MESHw), w_alt(MESHw_alt), FRFwrel_alt(MESHw_alt), FRFwrelABS_alt(MESHw_alt) {
 
-    properties();
+    properties(fileName);
 
     double stepx = L / (MESHx-1);
 
@@ -94,10 +99,10 @@ struct Beam {
     }
   }
 
-  void properties() {
+  void properties(std::string fileName) {
     std::fstream newfile;
     double data[15];
-    newfile.open("input_data.txt",std::ios::in);
+    newfile.open(fileName,std::ios::in);
 
     if (newfile.is_open()){
       std::string tp;
@@ -124,6 +129,9 @@ struct Beam {
     R = data[12];
     zeta1 = data[13];
     zeta2 = data[14];
+
+
+    // for (int jj=0; jj<15; jj++) std::cout << data[jj] << std::endl;
 
     YI = ((2 * b) / 3) * ((Ys * (pow(hs, 3) / 8)) + c11 * (pow(hp + (hs / 2), 3) - (pow(hs, 3) / 8)));
     m = b * (ps * hs + 2 * pp * hp);
@@ -180,10 +188,6 @@ struct Beam {
       matProp[i] *= T1;
     }
 
-    // std::vector<double> res(2);
-    // std::vector<double> A = { 1, 2, 3, 4 };
-    // std::vector<double> B = { 5, 6 };
-
     csIca = matrix_multiplication_linsys(matProp, zeta);
 
     for (int i=2; i<n; i+=2) {
@@ -196,18 +200,10 @@ struct Beam {
       damp[i] = zeta[0];
       damp[i+1] = zeta[1];
     }
-
-    // for (int i=0; i<n; i++) {
-    //   std::cout << damp[i] << ", ";
-    // }
   }
 
   void calculate_FRF() {
-    dcomplex T1;
-    dcomplex T2;
-    dcomplex T3;
-    dcomplex T4;
-    dcomplex T5;
+    dcomplex T1, T2, T3, T4, T5;
 
     int idx;
 
@@ -216,8 +212,6 @@ struct Beam {
       dFRFwrel[i] = 0.0;
       for (int j=0; j<n; j++) {
         idx = MESHx*(j + 1) - 1;
-        // if (i==0) std::cout << "idx: " << idx << std::endl;
-        // if (i==0) std::cout << "phiL: " << phi_r[idx] << std::endl;
         T1 = 0.0;
         T4 = 0.0;
         for (int k=0; k<n; k++) {
@@ -256,6 +250,74 @@ struct Beam {
 
   void update_resistante(double resistance) {
     R = resistance;
+  }
+
+  void update_frequency_FRF(double f_peak) {
+    double stepw = nf_alt / (MESHw_alt-1);
+
+    for (int i = 0; i<MESHw_alt; i++) {
+      f_alt[i] = f_peak - nf_alt/2 + i*stepw;
+      w_alt[i] = f_alt[i]*2*M_PI;
+
+      // std::cout << f_alt[i] << std::endl;
+    }
+
+    dcomplex T1, T2, T3, T4, T5;
+
+    int idx;
+
+    for (int i=0; i<MESHw_alt; i++) {
+      FRFwrel_alt[i] = 0.0;
+      // dFRFwrel[i] = 0.0;
+      for (int j=0; j<n; j++) {
+        idx = MESHx*(j + 1) - 1;
+        T1 = 0.0;
+        T4 = 0.0;
+        for (int k=0; k<n; k++) {
+          T1 += (_1j*w_alt[i]*theta_r[k]*sigma_mass[k])/(pow(omega_r[k], 2) - pow(w_alt[i], 2) + _1j*2.0*damp[k]*omega_r[k]*w_alt[i]);
+          T4 += (_1j*w_alt[i]*pow(theta_r[k], 2))/(pow(omega_r[k], 2) - pow(w_alt[i], 2) + _1j*2.0*damp[k]*omega_r[k]*w_alt[i]);
+        }
+
+        T2 = 1/R;
+        T3 = _1j*w_alt[i]*Cp[j];
+        T5 = phi_r[idx]/(pow(omega_r[j], 2) - pow(w_alt[i], 2) + _1j*2.0*damp[j]*omega_r[j]*w_alt[i]);
+
+        FRFwrel_alt[i] += (sigma_mass[j] - theta_r[j]*T1/(T2 + T3 + T4))*(T5);
+        // dFRFwrel[i] += - (theta_r[j]*T1*T5)/(pow(R, 2)*pow(T2 + T3 + T4, 2));
+
+        FRFwrelABS_alt[i] = log10(sqrt(pow(real(FRFwrel_alt[i]), 2) + pow(imag(FRFwrel_alt[i]), 2)));
+        // dFRFwrelABS[i] = log10(sqrt(pow(real(dFRFwrel[i]), 2) + pow(imag(dFRFwrel[i]), 2)));
+      }
+    }
+  }
+
+
+  void update_properties(std::string fileName) {
+    properties(fileName);
+
+    double stepx = L / (MESHx-1);
+
+    for (int i = 0; i<MESHx; i++) {
+      x[i] = i * stepx;
+    }
+
+    double stepw = (f_f - f_i) / (MESHw-1);
+
+    for (int i = 0; i<MESHw; i++) {
+      f[i] = f_i + i * stepw;
+      w[i] = f[i] * 2 * M_PI;
+    }
+
+    lamb_r = calculate_lambda();
+
+    for (int i = 0; i<n; i++) {
+      sigma_r[i] = (sin(lamb_r[i]) - sinh(lamb_r[i])) / 
+        (cos(lamb_r[i]) + cosh(lamb_r[i]));
+    }
+
+    for (int i = 0; i<n; i++) {
+      omega_r[i] = pow(lamb_r[i], 2) * sqrt(YI / (m * pow(L, 4)));
+    }
   }
 
   void printv(std::vector<double> vec) {

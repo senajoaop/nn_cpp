@@ -7,6 +7,8 @@
 #include <string>
 #include <complex>
 #include <math.h>
+#include <iomanip>
+#include <cstdlib>
 
 #include <stdio.h>
 #include <iostream>
@@ -14,6 +16,7 @@
 #include <gsl/gsl_math.h>
 #include <gsl/gsl_min.h>
 #include <gsl/gsl_multimin.h>
+
 
 
 std::vector<double> calculate_lambda() {

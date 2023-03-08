@@ -161,10 +161,10 @@ std::vector<double> solve_linear_system(std::vector<double> A, std::vector<doubl
 int get_idx_peak(std::vector<double> vec) {
   if (vec.size() == 1)
     return 0;
-  if (vec[0] >= vec[1])
-    return 0;
-  if (vec[vec.size() - 1] >= vec[vec.size() - 2])
-    return vec.size() - 1;
+  // if (vec[0] >= vec[1])
+  //   return 0;
+  // if (vec[vec.size() - 1] >= vec[vec.size() - 2])
+  //   return vec.size() - 1;
 
   for (int i=1; i<vec.size()-1; i++) {
     if (vec[i] >= vec[i-1] && vec[i] >= vec[i+1])
@@ -172,4 +172,57 @@ int get_idx_peak(std::vector<double> vec) {
   }
 
   return 0;
+}
+
+std::vector<int> get_idx_peaks(std::vector<double> vec) {
+  std::vector<int> peaks;
+
+  if (vec.size() == 1) {
+    peaks.push_back(0);
+    return peaks;
+  }
+
+  // if (vec[vec.size() - 1] >= vec[vec.size() - 2]) {
+  //   peaks.push_back(vec.size() - 1);
+  //   return peaks;
+  // }
+
+  for (int i=1; i<vec.size()-1; i++) {
+    if (vec[i] >= vec[i-1] && vec[i] >= vec[i+1])
+      peaks.push_back(i);
+  }
+
+  return peaks;
+}
+
+
+void random_data_generator(int n) {
+
+  double L, b, Ys, c11, e31, eps33, hs, hp, ps, pp;
+
+	srand((unsigned) time(NULL));
+
+  std::ofstream fout("random_data.txt");
+  fout << std::setprecision(20);
+  fout << "L,b,Ys,c11,e31,eps33,hs,hp,ps,pp";
+
+  for (int i=0; i<n; i++) {
+    L = 10.0e-3 + (double)rand()/RAND_MAX*(100.0e-3 - 10.0e-3);
+    b = 2.0e-3 + (double)rand()/RAND_MAX*(10.0e-3 - 2.0e-3);
+    Ys = 10.0e8 + (double)rand()/RAND_MAX*(10.0e10 - 10.0e8);
+    c11 = 10.0e8 + (double)rand()/RAND_MAX*(10.0e10 - 10.0e8);
+    e31 = -1.0 + (double)rand()/RAND_MAX*(-20.0 - (-1.0));
+    eps33 = 1.0e-9 + (double)rand()/RAND_MAX*(20.0e-9 - 1.0e-9);
+    hs = 0.1e-3 + (double)rand()/RAND_MAX*(1.0e-3 - 0.1e-3);
+    hp = 0.1e-3 + (double)rand()/RAND_MAX*(1.0e-3 - 0.1e-3);
+    ps = 1.0e3 + (double)rand()/RAND_MAX*(5.0e3 - 1.0e3);
+    pp = 5.0e3 + (double)rand()/RAND_MAX*(10.0e3 - 5.0e3);
+
+    fout << '\n';
+    fout << L << ',' << b << ',' << Ys << ',' << c11 << ',' << e31 << ',' << eps33 << ',' << hs << ',' << hp << ',' << ps << ',' << pp;
+    // std::cout << L << ',' << b << ',' << Ys << ',' << c11 << ',' << e31 << ',' << eps33 << ',' << hs << ',' << hp << ',' << ps << ',' << pp << std::endl;
+  }
+
+  fout.close();
+
 }

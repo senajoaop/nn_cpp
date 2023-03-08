@@ -6,6 +6,42 @@ import matplotlib.pyplot as plt
 
 plt.style.use('seaborn')
 
+
+
+
+
+val = []
+with open("data_vec.txt", 'r') as file:
+    for line in file:
+        data = line.split(',')
+        # data = list(filter(None, data))
+        # data = list(filter(lambda x: '\n', data))
+        data = [item for item in data if item!='']
+        data = [item for item in data if item!='\n']
+        val.append(np.array([float(item) for item in data]))
+
+
+print(val[0].shape, val[0])
+
+for i in range(1, 40):
+    plt.plot(val[0], val[i], label=f"R={i}")
+
+# plt.plot(val[0], val[1])
+
+plt.legend()
+plt.show()
+
+
+
+
+
+
+
+
+
+
+sys.exit()
+
 a = 3
 b = 7
 
