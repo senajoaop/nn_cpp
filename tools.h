@@ -207,16 +207,16 @@ void random_data_generator(int n) {
   fout << "L,b,Ys,c11,e31,eps33,hs,hp,ps,pp";
 
   for (int i=0; i<n; i++) {
-    L = 10.0e-3 + (double)rand()/RAND_MAX*(100.0e-3 - 10.0e-3);
-    b = 2.0e-3 + (double)rand()/RAND_MAX*(10.0e-3 - 2.0e-3);
-    Ys = 10.0e8 + (double)rand()/RAND_MAX*(10.0e10 - 10.0e8);
-    c11 = 10.0e8 + (double)rand()/RAND_MAX*(10.0e10 - 10.0e8);
-    e31 = -1.0 + (double)rand()/RAND_MAX*(-20.0 - (-1.0));
-    eps33 = 1.0e-9 + (double)rand()/RAND_MAX*(20.0e-9 - 1.0e-9);
-    hs = 0.1e-3 + (double)rand()/RAND_MAX*(1.0e-3 - 0.1e-3);
-    hp = 0.1e-3 + (double)rand()/RAND_MAX*(1.0e-3 - 0.1e-3);
-    ps = 1.0e3 + (double)rand()/RAND_MAX*(5.0e3 - 1.0e3);
-    pp = 5.0e3 + (double)rand()/RAND_MAX*(10.0e3 - 5.0e3);
+    L = 0.027 + (double)rand()/RAND_MAX*(0.033 - 0.027);
+    b = 0.0045 + (double)rand()/RAND_MAX*(0.0055 - 0.0045);
+    Ys = 63000000000 + (double)rand()/RAND_MAX*(77000000000 - 63000000000);
+    c11 = 54900000000 + (double)rand()/RAND_MAX*(67100000000 - 54900000000);
+    e31 = -9.36 + (double)rand()/RAND_MAX*(-11.44 - (-9.36));
+    eps33 = 0.00000001197 + (double)rand()/RAND_MAX*(0.00000001463 - 0.00000001197);
+    hs = 0.000045 + (double)rand()/RAND_MAX*(0.000055 - 0.000045);
+    hp = 0.000135 + (double)rand()/RAND_MAX*(0.000165 - 0.000135);
+    ps = 2430 + (double)rand()/RAND_MAX*(2970 - 2430);
+    pp = 6975 + (double)rand()/RAND_MAX*(8525 - 6975);
 
     fout << '\n';
     fout << L << ',' << b << ',' << Ys << ',' << c11 << ',' << e31 << ',' << eps33 << ',' << hs << ',' << hp << ',' << ps << ',' << pp;
