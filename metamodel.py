@@ -22,7 +22,7 @@ from sklearn.metrics import confusion_matrix
 class MetaModelNN:
     def __init__(self):
         myDict = {}
-        with open("res_opt_500.txt", 'r') as file:
+        with open("res_opt_20000.txt", 'r') as file:
             spamreader = csv.reader(file, delimiter=',')
             next(spamreader)
             for row in spamreader:
@@ -72,23 +72,33 @@ class MetaModelNN:
         data = np.array(data)
         target = np.array(target).reshape((-1, 1))
 
-        if True:
-            scaler = StandardScaler()
-            data = scaler.fit_transform(data)
-
-        self.data = data
-        self.target = target
-
+        # if True:
+        #     scaler = StandardScaler()
+        #     data = scaler.fit_transform(data)
+        #
+        # self.data = data
+        # self.target = target
+        #
         self.trainX, self.testX, self.trainY, self.testY = train_test_split(data, target, test_size=0.2, train_size=0.8)
+        #
+        # print(self.trainX.shape)
+        # print(self.trainY.shape)
+        # print(data.shape[1])
 
-        print(self.trainX.shape)
-        print(self.trainY.shape)
-        print(data.shape[1])
+        self.normalizer = tf.keras.layers.Normalization(axis=-1)
 
+        self.normalizer.adapt(np.array(self.trainX))
 
-        print(target)
+        # print(self.normalizer.mean.numpy())
 
-        sys.exit()
+        # print(self.trainY)
+
+        # sys.exit()
+
+        # print(normalizer.mean.numpy())
+
+        # print(normalizer(self.trainX[:1]).numpy())
+        # sys.exit()
 
 
 
@@ -120,7 +130,8 @@ class MetaModelNN:
 
         # self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
         # self.model.compile(optimizer='adam', loss='sparse_categorical_crossentropy', metrics=['accuracy'])
-        self.model.compile(optimizer='adam', loss='categorical_crossentropy', metrics=['accuracy'])
+        # self.model.compile(optimizer='adam', loss='mean_absolute_error', metrics=['accuracy'])
+        self.model.compile(optimizer=tf.keras.optimizers.Adam(learning_rate=0.01), loss='mean_absolute_error')
 
 
         print(self.model.summary())
@@ -140,6 +151,61 @@ class MetaModelNN:
             
 
 
+
+    def training_2(self):
+        
+
+        model = keras.Sequential([
+            self.normalizer,
+            keras.layers.Dense(100, activation='relu'),
+            keras.layers.Dropout(0.5),
+            keras.layers.Dense(200, activation='relu'),
+            keras.layers.Dropout(0.5),
+            keras.layers.Dense(200, activation='relu'),
+            # keras.layers.Dropout(0.5),
+            keras.layers.Dense(1),
+        ])
+
+        
+        model.compile(loss='mean_absolute_error',
+                      optimizer=tf.keras.optimizers.Adam(0.001))
+
+        model.summary()
+
+        history = model.fit(
+            self.trainX,
+            self.trainY,
+            validation_split=0.2,
+            # verbose=0,
+            epochs=100)
+
+        results = model.evaluate(self.testX, self.testY)#, verbose=0)
+
+
+        test_predictions = model.predict(self.testX).flatten()
+
+        a = plt.axes(aspect='equal')
+        plt.scatter(self.testY, test_predictions)
+        plt.xlabel('True Values [R]')
+        plt.ylabel('Predictions [R]')
+        lims = [80000, 180000]
+        plt.xlim(lims)
+        plt.ylim(lims)
+        _ = plt.plot(lims, lims)
+
+        plt.show()
+
+
+
+        plt.plot(history.history['loss'], label='loss')
+        plt.plot(history.history['val_loss'], label='val_loss')
+        # plt.ylim([0, 10])
+        plt.xlabel('Epoch')
+        plt.ylabel('Error [R]')
+        plt.legend()
+        plt.grid(True)
+
+        plt.show()
 
 
 
@@ -161,7 +227,8 @@ class MetaModelNN:
 if __name__=="__main__":
     nn = MetaModelNN()
     nn.data_organization()
-    nn.training()
+    # nn.training()
+    nn.training_2()
 
 
 
