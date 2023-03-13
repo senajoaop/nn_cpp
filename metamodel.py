@@ -7,7 +7,7 @@ from sklearn import datasets
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelBinarizer
 from keras.models import Sequential
-from keras.layers.core import Dense
+from keras.layers.core import Dense, Dropout
 from keras.layers import LSTM
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import SGD
@@ -15,6 +15,7 @@ import keras
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import confusion_matrix
+import kerastuner as kt
 
 
 
@@ -109,14 +110,14 @@ class MetaModelNN:
         # self.model.add(keras.layers.Activation('relu'))
         # self.model.add(keras.layers.Dropout(0.5))
         ###second layer
-        self.model.add(keras.layers.Dense(200, activation='relu'))
+        self.model.add(keras.layers.Dense(64, activation='relu'))
         # self.model.add(keras.layers.Activation('relu'))
         # self.model.add(keras.layers.Dropout(0.5))
         ###third layer
-        self.model.add(keras.layers.Dense(200, activation='relu'))
+        self.model.add(keras.layers.Dense(64, activation='relu'))
         # self.model.add(keras.layers.Activation('relu'))
         # self.model.add(keras.layers.Dropout(0.5))
-        self.model.add(keras.layers.Dense(200, activation='relu'))
+        # self.model.add(keras.layers.Dense(200, activation='relu'))
         # self.model.add(keras.layers.Activation('relu'))
         # self.model.add(keras.layers.Dropout(0.5))
         ###final layer
@@ -158,17 +159,19 @@ class MetaModelNN:
         model = keras.Sequential([
             self.normalizer,
             keras.layers.Dense(100, activation='relu'),
-            keras.layers.Dropout(0.5),
-            keras.layers.Dense(200, activation='relu'),
-            keras.layers.Dropout(0.5),
-            keras.layers.Dense(200, activation='relu'),
-            # keras.layers.Dropout(0.5),
+            keras.layers.Dropout(0.2),
+            keras.layers.Dense(400, activation='relu'),
+            keras.layers.Dropout(0.2),
+            keras.layers.Dense(800, activation='relu'),
+            keras.layers.Dropout(0.2),
+            keras.layers.Dense(400, activation='relu'),
+            keras.layers.Dropout(0.2),
             keras.layers.Dense(1),
         ])
 
         
         model.compile(loss='mean_absolute_error',
-                      optimizer=tf.keras.optimizers.Adam(0.001))
+                      optimizer=tf.keras.optimizers.Adam(0.0001))
 
         model.summary()
 
@@ -177,7 +180,7 @@ class MetaModelNN:
             self.trainY,
             validation_split=0.2,
             # verbose=0,
-            epochs=100)
+            epochs=500)
 
         results = model.evaluate(self.testX, self.testY)#, verbose=0)
 
@@ -208,6 +211,51 @@ class MetaModelNN:
         plt.show()
 
 
+    def hyperparameter(self):
+        def build_model_comp(hp):
+            model = Sequential()
+            model.add(self.normalizer)
+            counter = 0
+            for i in range(hp.Int('num_layers',min_value=1,max_value=10)):
+                if counter == 0:
+                    model.add(Dense(hp.Int('units' + str(i), min_value=8, max_value=128,step=8),activation= hp.Choice('activation' + str(i), values=['relu','tanh','sigmoid'])))
+                    model.add(Dropout(hp.Choice('dropout' + str(i), values=[0.1,0.2,0.3,0.4,0.5,0.6])))
+                else:
+                    model.add(Dense(hp.Int('units' + str(i), min_value=8, max_value=128,step=8),activation= hp.Choice('activation' + str(i), values=['relu','tanh','sigmoid'])))
+                    model.add(Dropout(hp.Choice('dropout' + str(i), values=[0.1,0.2,0.3,0.4,0.5,0.6])))
+                counter+=1
+            model.add(Dense(1))
+            model.compile(optimizer=hp.Choice('optimizer', values=['rmsprop','adam','sgd','nadam','adadelta']),
+                      loss='mean_absolute_error')
+
+
+            return model
+
+
+        def build_model(hp):
+            model = Sequential()
+            model.add(self.normalizer)
+            model.add(Dense(64,activation='relu'))
+            model.add(Dense(64,activation='relu'))
+            model.add(Dense(1))
+            optimizer = hp.Choice('optimizer', values = ['adam','sgd','rmsprop','adadelta'])
+            model.compile(optimizer=optimizer, loss='mean_absolute_error')
+
+            return model
+        
+
+        tuner = kt.RandomSearch(build_model_comp,
+                        objective='val_loss',
+                        max_trials=10)
+
+
+        tuner.search(self.trainX, self.trainY,epochs=50, validation_data=(self.testX, self.testY))
+        tuner.get_best_hyperparameters()[0].values
+        print(tuner.get_best_hyperparameters()[0].values)
+
+        model = tuner.get_best_models(num_models=1)[0]
+        model.summary()
+
 
 
 
@@ -228,7 +276,8 @@ if __name__=="__main__":
     nn = MetaModelNN()
     nn.data_organization()
     # nn.training()
-    nn.training_2()
+    # nn.training_2()
+    nn.hyperparameter()
 
 
 
