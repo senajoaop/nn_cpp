@@ -9,12 +9,14 @@ from sklearn.preprocessing import LabelBinarizer
 from keras.models import Sequential
 from keras.layers.core import Dense, Dropout
 from keras.layers import LSTM
+from keras.regularizers import l1, l2
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.optimizers import SGD
 import keras
 import tensorflow as tf
 from sklearn.preprocessing import StandardScaler, MinMaxScaler
 from sklearn.metrics import confusion_matrix
+from scipy.io import savemat, loadmat
 import kerastuner as kt
 
 
@@ -73,22 +75,26 @@ class MetaModelNN:
         data = np.array(data)
         target = np.array(target).reshape((-1, 1))
 
-        # if True:
-        #     scaler = StandardScaler()
-        #     data = scaler.fit_transform(data)
-        #
+        self.scaler = StandardScaler()
+        data = self.scaler.fit_transform(data)
+
         # self.data = data
         # self.target = target
-        #
+        
         self.trainX, self.testX, self.trainY, self.testY = train_test_split(data, target, test_size=0.2, train_size=0.8)
-        #
+       
         # print(self.trainX.shape)
         # print(self.trainY.shape)
         # print(data.shape[1])
 
         self.normalizer = tf.keras.layers.Normalization(axis=-1)
-
         self.normalizer.adapt(np.array(self.trainX))
+
+
+        savemat("models/trainX.mat", {'trainX': self.trainX})
+        savemat("models/testX.mat", {'testX': self.testX})
+        savemat("models/trainY.mat", {'trainY': self.trainY})
+        savemat("models/testY.mat", {'testY': self.testY})
 
         # print(self.normalizer.mean.numpy())
 
@@ -157,19 +163,19 @@ class MetaModelNN:
         
 
         model = keras.Sequential([
-            self.normalizer,
-            keras.layers.Dense(100, activation='relu'),
+            # self.normalizer,
+            keras.layers.Input(self.trainX.shape[1]),
+            keras.layers.Dense(100, activation='relu', kernel_regularizer=l2(0.001)),
             keras.layers.Dropout(0.2),
-            keras.layers.Dense(400, activation='relu'),
+            keras.layers.Dense(400, activation='relu', kernel_regularizer=l2(0.001)),
             keras.layers.Dropout(0.2),
-            keras.layers.Dense(800, activation='relu'),
+            keras.layers.Dense(800, activation='relu', kernel_regularizer=l2(0.001)),
             keras.layers.Dropout(0.2),
-            keras.layers.Dense(400, activation='relu'),
+            keras.layers.Dense(400, activation='relu', kernel_regularizer=l2(0.001)),
             keras.layers.Dropout(0.2),
             keras.layers.Dense(1),
         ])
 
-        
         model.compile(loss='mean_absolute_error',
                       optimizer=tf.keras.optimizers.Adam(0.0001))
 
@@ -180,9 +186,9 @@ class MetaModelNN:
             self.trainY,
             validation_split=0.2,
             # verbose=0,
-            epochs=500)
+            epochs=50)
 
-        results = model.evaluate(self.testX, self.testY)#, verbose=0)
+        results = model.evaluate(self.testX, self.testY)
 
 
         test_predictions = model.predict(self.testX).flatten()
@@ -216,13 +222,12 @@ class MetaModelNN:
             model = Sequential()
             model.add(self.normalizer)
             counter = 0
-            for i in range(hp.Int('num_layers',min_value=1,max_value=10)):
-                if counter == 0:
-                    model.add(Dense(hp.Int('units' + str(i), min_value=8, max_value=128,step=8),activation= hp.Choice('activation' + str(i), values=['relu','tanh','sigmoid'])))
-                    model.add(Dropout(hp.Choice('dropout' + str(i), values=[0.1,0.2,0.3,0.4,0.5,0.6])))
-                else:
-                    model.add(Dense(hp.Int('units' + str(i), min_value=8, max_value=128,step=8),activation= hp.Choice('activation' + str(i), values=['relu','tanh','sigmoid'])))
-                    model.add(Dropout(hp.Choice('dropout' + str(i), values=[0.1,0.2,0.3,0.4,0.5,0.6])))
+            for i in range(hp.Int('num_layers', min_value=1, max_value=6)):
+                model.add(Dense(hp.Int('units' + str(i), min_value=64, max_value=640, step=64),
+                                activation= hp.Choice('activation' + str(i), values=['relu','tanh','sigmoid']),
+                                kernel_initializer=hp.Choice(f'kernel_init{i}', values=['he_normal', 'random_uniform']),
+                                kernel_regularizer=l2(hp.Choice(f'regularizer{i}', values=[0.001, 0.0001, 0.00001, 0.000001]))))
+                model.add(Dropout(hp.Choice('dropout' + str(i), values=[0.05, 0.1, 0.2, 0.3])))
                 counter+=1
             model.add(Dense(1))
             model.compile(optimizer=hp.Choice('optimizer', values=['rmsprop','adam','sgd','nadam','adadelta']),
@@ -246,24 +251,20 @@ class MetaModelNN:
 
         tuner = kt.RandomSearch(build_model_comp,
                         objective='val_loss',
-                        max_trials=10)
+                        max_trials=100,
+                        directory='keras_tuner_data',
+                        project_name='nncpp_tuner',
+                        overwrite=True)
 
-
-        tuner.search(self.trainX, self.trainY,epochs=50, validation_data=(self.testX, self.testY))
+        tuner.search(self.trainX, self.trainY, epochs=100, validation_data=(self.testX, self.testY))
         tuner.get_best_hyperparameters()[0].values
         print(tuner.get_best_hyperparameters()[0].values)
 
         model = tuner.get_best_models(num_models=1)[0]
         model.summary()
 
-
-
-
-
-
-
-
-
+        model.save("models/hyper_model")
+        model.save("models/hyper_model.h5")
 
 
 
