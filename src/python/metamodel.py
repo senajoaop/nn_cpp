@@ -25,7 +25,7 @@ import kerastuner as kt
 class MetaModelNN:
     def __init__(self):
         myDict = {}
-        with open("res_opt_20000.txt", 'r') as file:
+        with open("/../data/res_opt_20000.txt", 'r') as file:
             spamreader = csv.reader(file, delimiter=',')
             next(spamreader)
             for row in spamreader:

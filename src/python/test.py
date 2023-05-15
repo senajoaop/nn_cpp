@@ -11,7 +11,7 @@ plt.style.use('seaborn')
 
 
 val = []
-with open("data_vec.txt", 'r') as file:
+with open("/../data/data_vec.txt", 'r') as file:
     for line in file:
         data = line.split(',')
         # data = list(filter(None, data))
